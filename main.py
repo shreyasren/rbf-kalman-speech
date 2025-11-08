@@ -21,6 +21,8 @@ from rbf import RadialBasisFunction, create_rbf_for_kalman
 from kalman_filter import KalmanFilterSpeech, enhance_speech_rbf_kalman
 from envelope_detection import EnvelopeDetector, detect_envelope, remove_silence_from_signal
 from speech_recognition import CorrelationSpeechRecognizer, DTWSpeechRecognizer
+from rbf_classifier import MultiLayerRBFClassifier
+from contextual_features import extract_advanced_frame_features
 from visualization import SpeechVisualizer
 
 
@@ -47,6 +49,7 @@ class SpeechEnhancementExperiment:
         self.envelope_detector = EnvelopeDetector()
         self.recognizer = CorrelationSpeechRecognizer()
         self.dtw_recognizer = DTWSpeechRecognizer()
+        self.rbf_classifier = None  # Will be trained later
         self.visualizer = SpeechVisualizer()
 
         # Create directory structure
@@ -186,6 +189,7 @@ class SpeechEnhancementExperiment:
         print("BUILDING RECOGNITION DATABASE")
         print("=" * 60)
 
+        # For traditional recognizers
         for key, data in voiced_database.items():
             # Extract word label
             word = key.split('_')[0]
@@ -199,6 +203,72 @@ class SpeechEnhancementExperiment:
         for word in self.recognizer.labels:
             count = len(self.recognizer.database[word])
             print(f"  {word}: {count} samples")
+
+        # Train RBF classifier
+        self._train_rbf_classifier(voiced_database)
+
+    def _train_rbf_classifier(self, voiced_database):
+        """
+        Train the multi-layer RBF classifier for speech recognition.
+
+        Args:
+            voiced_database: Dictionary of voiced signals
+        """
+        print("\n" + "=" * 60)
+        print("TRAINING RBF CLASSIFIER (Multi-Layer Neural Network)")
+        print("=" * 60)
+
+        # Prepare training data
+        X_train = []
+        y_train = []
+        word_to_idx = {}
+
+        for key, data in voiced_database.items():
+            word = key.split('_')[0]
+
+            # Assign class index
+            if word not in word_to_idx:
+                word_to_idx[word] = len(word_to_idx)
+
+            # Extract features from voiced signal
+            voiced_signal = data['voiced_signal']
+            features = extract_advanced_frame_features(
+                voiced_signal,
+                sr=self.sample_rate,
+                frame_len=320,
+                hop_len=160
+            )
+
+            # Use mean features across frames
+            if len(features) > 0:
+                mean_features = np.mean(features, axis=0)
+                X_train.append(mean_features)
+                y_train.append(word_to_idx[word])
+
+        X_train = np.array(X_train)
+        y_train = np.array(y_train)
+
+        print(f"Training data: {X_train.shape[0]} samples, {X_train.shape[1]} features")
+        print(f"Classes: {len(word_to_idx)} words - {list(word_to_idx.keys())}")
+
+        # Create and train classifier
+        self.rbf_classifier = MultiLayerRBFClassifier(
+            k1=min(40, X_train.shape[0]),  # Adjust to data size
+            k2=min(20, X_train.shape[0] // 2),
+            gamma1=0.01,
+            gamma2=0.05,
+            n_classes=len(word_to_idx),
+            random_state=42
+        )
+
+        self.rbf_classifier.fit(X_train, y_train, max_iter=100, learning_rate=0.01, verbose=True)
+
+        # Store word mapping
+        self.rbf_word_mapping = {idx: word for word, idx in word_to_idx.items()}
+
+        # Evaluate on training data
+        train_acc = self.rbf_classifier.score(X_train, y_train)
+        print(f"\n✓ RBF Classifier training complete. Training accuracy: {train_acc:.4f}")
 
     def test_recognition(self, test_word, test_file=None, snr_db=10):
         """
@@ -265,6 +335,37 @@ class SpeechEnhancementExperiment:
         print(f"  Distance: {dtw_distance:.3f}")
         print(f"  All distances: {all_distances}")
 
+        # Recognize using RBF Classifier
+        rbf_word = None
+        rbf_confidence = 0.0
+        rbf_probs = None
+
+        if self.rbf_classifier is not None:
+            # Extract features from test signal
+            test_features = extract_advanced_frame_features(
+                voiced_test,
+                sr=self.sample_rate,
+                frame_len=320,
+                hop_len=160
+            )
+
+            if len(test_features) > 0:
+                mean_test_features = np.mean(test_features, axis=0, keepdims=True)
+
+                # Predict
+                y_pred = self.rbf_classifier.predict(mean_test_features)[0]
+                rbf_probs = self.rbf_classifier.predict_proba(mean_test_features)[0]
+                rbf_word = self.rbf_word_mapping[y_pred]
+                rbf_confidence = rbf_probs[y_pred]
+
+                print(f"\nRBF Classifier Recognition (Multi-Layer Neural Network):")
+                print(f"  Recognized: {rbf_word}")
+                print(f"  Confidence: {rbf_confidence:.4f}")
+                print(f"  Class probabilities:")
+                for idx, prob in enumerate(rbf_probs):
+                    word = self.rbf_word_mapping[idx]
+                    print(f"    {word}: {prob:.4f}")
+
         # Save test signal
         test_key = f"test_{test_word}"
         filename = os.path.join(self.paths['test'], f"{test_key}.wav")
@@ -280,7 +381,10 @@ class SpeechEnhancementExperiment:
             'scores_corr': all_scores,
             'recognized_dtw': dtw_word,
             'distance_dtw': dtw_distance,
-            'distances_dtw': all_distances
+            'distances_dtw': all_distances,
+            'recognized_rbf': rbf_word,
+            'confidence_rbf': rbf_confidence,
+            'probs_rbf': rbf_probs
         }
 
     def visualize_results(self, enhanced_database, voiced_database):

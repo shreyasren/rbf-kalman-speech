@@ -1,0 +1,96 @@
+================================================================================
+ADVANCED EXPERIMENTS SUMMARY
+================================================================================
+
+
+WHITE NOISE
+--------------------------------------------------------------------------------
+
+  SNR 5 dB:
+    Baseline:    SNR=5.13 dB, MSE=0.036227
+    Contextual:  SNR=100.00 dB, MSE=nan
+    Improvement: +94.87 dB
+
+  SNR 10 dB:
+    Baseline:    SNR=10.11 dB, MSE=0.011515
+    Contextual:  SNR=100.00 dB, MSE=nan
+    Improvement: +89.89 dB
+
+  SNR 15 dB:
+    Baseline:    SNR=15.07 dB, MSE=0.003677
+    Contextual:  SNR=100.00 dB, MSE=nan
+    Improvement: +84.93 dB
+
+  SNR 20 dB:
+    Baseline:    SNR=20.05 dB, MSE=0.001168
+    Contextual:  SNR=100.00 dB, MSE=nan
+    Improvement: +79.95 dB
+
+FAN NOISE
+--------------------------------------------------------------------------------
+
+  SNR 5 dB:
+    Baseline:    SNR=5.01 dB, MSE=0.037319
+    Contextual:  SNR=100.00 dB, MSE=nan
+    Improvement: +94.99 dB
+
+  SNR 10 dB:
+    Baseline:    SNR=10.01 dB, MSE=0.011794
+    Contextual:  SNR=100.00 dB, MSE=nan
+    Improvement: +89.99 dB
+
+  SNR 15 dB:
+    Baseline:    SNR=15.01 dB, MSE=0.003728
+    Contextual:  SNR=100.00 dB, MSE=nan
+    Improvement: +84.99 dB
+
+  SNR 20 dB:
+    Baseline:    SNR=20.01 dB, MSE=0.001179
+    Contextual:  SNR=100.00 dB, MSE=nan
+    Improvement: +79.99 dB
+
+STREET NOISE
+--------------------------------------------------------------------------------
+
+  SNR 5 dB:
+    Baseline:    SNR=5.02 dB, MSE=0.037225
+    Contextual:  SNR=100.00 dB, MSE=nan
+    Improvement: +94.98 dB
+
+  SNR 10 dB:
+    Baseline:    SNR=10.03 dB, MSE=0.011746
+    Contextual:  SNR=100.00 dB, MSE=nan
+    Improvement: +89.97 dB
+
+  SNR 15 dB:
+    Baseline:    SNR=15.03 dB, MSE=0.003710
+    Contextual:  SNR=100.00 dB, MSE=nan
+    Improvement: +84.97 dB
+
+  SNR 20 dB:
+    Baseline:    SNR=20.03 dB, MSE=0.001174
+    Contextual:  SNR=100.00 dB, MSE=nan
+    Improvement: +79.97 dB
+
+AMBIENT NOISE
+--------------------------------------------------------------------------------
+
+  SNR 5 dB:
+    Baseline:    SNR=5.03 dB, MSE=0.037124
+    Contextual:  SNR=100.00 dB, MSE=nan
+    Improvement: +94.97 dB
+
+  SNR 10 dB:
+    Baseline:    SNR=10.04 dB, MSE=0.011719
+    Contextual:  SNR=100.00 dB, MSE=nan
+    Improvement: +89.96 dB
+
+  SNR 15 dB:
+    Baseline:    SNR=15.04 dB, MSE=0.003706
+    Contextual:  SNR=100.00 dB, MSE=nan
+    Improvement: +84.96 dB
+
+  SNR 20 dB:
+    Baseline:    SNR=20.03 dB, MSE=0.001174
+    Contextual:  SNR=100.00 dB, MSE=nan
+    Improvement: +79.97 dB
