@@ -150,9 +150,9 @@ Demonstrates the complete pipeline:
 
 ### 3. Run Comprehensive Validation Experiments
 
-\`\`\`bash
+```bash
 python3 run_advanced_experiments.py
-\`\`\`
+```
 
 **This is the main validation script** that systematically tests all three core improvements:
 
@@ -164,8 +164,9 @@ Tests across:
 - 4 noise types × 4 SNR levels (5, 10, 15, 20 dB) × 2 methods = **32 test conditions**
 - Comprehensive performance analysis with detailed metrics
 - Side-by-side comparisons of baseline vs. enhanced methods
+- Speech recognition with multi-layer RBF classifier
 
-**Results**: All figures and metrics saved in \`data/results/\`  
+**Results**: All figures and metrics saved in `data/results/`  
 **Note**: This script validates that the repository improvements actually work better than the original paper's approach
 
 ---

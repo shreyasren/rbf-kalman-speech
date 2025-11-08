@@ -64,6 +64,35 @@ class AudioProcessor:
 
         return normalized_audio
 
+    def save_audio(self, audio, filename, sample_rate=None):
+        """
+        Save audio signal to file.
+
+        Args:
+            audio: Audio signal to save
+            filename: Output file path
+            sample_rate: Sample rate (uses self.sample_rate if not provided)
+
+        Returns:
+            success: True if saved successfully
+        """
+        if sample_rate is None:
+            sample_rate = self.sample_rate
+        
+        try:
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
+            
+            # Normalize to prevent clipping
+            audio_normalized = self.normalize(audio)
+            
+            # Save using soundfile
+            sf.write(filename, audio_normalized, sample_rate)
+            return True
+        except Exception as e:
+            print(f"Error saving {filename}: {e}")
+            return False
+
     def add_noise(self, audio, snr_db=10, noise_type='white'):
         """
         Add noise to audio signal.

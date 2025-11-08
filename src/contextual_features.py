@@ -42,6 +42,9 @@ def add_temporal_context(features, context_frames=5):
         context_list.append(context_vector)
 
     contextual_features = np.array(context_list)
+    
+    # Handle NaN and inf values - replace with 0
+    contextual_features = np.nan_to_num(contextual_features, nan=0.0, posinf=0.0, neginf=0.0)
 
     return contextual_features
 
@@ -88,6 +91,9 @@ def expand_nonlinear(features):
 
     # Concatenate all
     expanded_features = np.hstack(expansions)
+    
+    # Handle NaN and inf values - replace with 0
+    expanded_features = np.nan_to_num(expanded_features, nan=0.0, posinf=0.0, neginf=0.0)
 
     return expanded_features
 
@@ -268,6 +274,9 @@ def extract_advanced_frame_features(signal, sr=16000, frame_len=320, hop_len=160
         feature_list.append(frame_features)
 
     features = np.array(feature_list)
+    
+    # Handle NaN and inf values - replace with 0
+    features = np.nan_to_num(features, nan=0.0, posinf=0.0, neginf=0.0)
 
     return features
 

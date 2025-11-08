@@ -59,6 +59,10 @@ def run_noise_type_comparison():
         clean_signal = processor.resample(clean_signal, sr, 16000)
 
     clean_signal = processor.normalize(clean_signal)
+    
+    # Save clean reference
+    clean_ref_path = os.path.join(paths['test'], 'clean_reference.wav')
+    processor.save_audio(clean_signal, clean_ref_path, sample_rate=16000)
 
     # Test parameters
     noise_types = ['white', 'fan', 'street', 'ambient']
@@ -66,6 +70,10 @@ def run_noise_type_comparison():
     use_contextual = [False, True]
 
     results = {}
+    
+    # Store signals for visualization
+    noisy_signals = {}
+    enhanced_signals = {}
 
     for noise_type in noise_types:
         print(f"\n{'-' * 80}")
@@ -79,6 +87,14 @@ def run_noise_type_comparison():
 
             # Add noise
             noisy_signal, _ = processor.add_noise(clean_signal, snr_db, noise_type=noise_type)
+            
+            # Store for visualization
+            noisy_signals[(noise_type, snr_db)] = noisy_signal.copy()
+            
+            # Save noisy sample (once per SNR/noise combo)
+            noisy_filename = f"noisy_{noise_type}_{snr_db}dB.wav"
+            noisy_path = os.path.join(paths['test'], noisy_filename)
+            processor.save_audio(noisy_signal, noisy_path, sample_rate=16000)
 
             for use_ctx in use_contextual:
                 method_name = "With Contextual Features" if use_ctx else "Baseline"
@@ -99,6 +115,16 @@ def run_noise_type_comparison():
                     R=0.01,
                     order=12
                 )
+                
+                # Store for visualization
+                method_key = 'contextual' if use_ctx else 'baseline'
+                enhanced_signals[(noise_type, snr_db, method_key)] = enhanced_signal.copy()
+                
+                # Save enhanced sample
+                method_suffix = "contextual" if use_ctx else "baseline"
+                enhanced_filename = f"enhanced_{method_suffix}_{noise_type}_{snr_db}dB.wav"
+                enhanced_path = os.path.join(paths['processed'], enhanced_filename)
+                processor.save_audio(enhanced_signal, enhanced_path, sample_rate=16000)
 
                 # Compute metrics
                 metrics = compute_all_metrics(clean_signal, enhanced_signal, sr=16000)
@@ -110,8 +136,21 @@ def run_noise_type_comparison():
                 print(f"      SNR Improvement: {metrics['snr']:.2f} dB")
                 print(f"      MSE: {metrics['mse']:.6f}")
 
-    # Save results summary
-    save_noise_comparison_results(results, paths['results'])
+    # Save results summary with visualizations
+    save_noise_comparison_results(
+        results, 
+        paths['results'],
+        clean_signal=clean_signal,
+        noisy_signals=noisy_signals,
+        enhanced_signals=enhanced_signals
+    )
+    
+    # Print audio save summary
+    num_noisy = len(noise_types) * len(snr_levels)
+    num_enhanced = num_noisy * 2  # baseline + contextual for each
+    print(f"\n✓ Saved {num_noisy} noisy samples to: data/test/")
+    print(f"✓ Saved {num_enhanced} enhanced samples to: data/processed/")
+    print(f"✓ Saved 1 clean reference to: data/test/")
 
     return results
 
@@ -206,6 +245,11 @@ def run_rbf_classifier_experiment():
     y_train = np.array(y_train)
     X_test = np.array(X_test) if X_test else np.array([]).reshape(0, X_train.shape[1])
     y_test = np.array(y_test)
+    
+    # Safety check: Replace any remaining NaN or inf values
+    X_train = np.nan_to_num(X_train, nan=0.0, posinf=0.0, neginf=0.0)
+    if len(X_test) > 0:
+        X_test = np.nan_to_num(X_test, nan=0.0, posinf=0.0, neginf=0.0)
 
     print(f"\nTraining set: {len(X_train)} samples")
     print(f"Test set: {len(X_test)} samples")
@@ -267,11 +311,22 @@ def run_method_comparison():
     print("\nTo fully test, run main.py with enhanced pipeline.")
 
 
-def save_noise_comparison_results(results, results_dir):
+def save_noise_comparison_results(results, results_dir, clean_signal=None, noisy_signals=None, 
+                                 enhanced_signals=None):
     """
     Save noise comparison results as figures and text.
+    
+    Args:
+        results: Dictionary of results
+        results_dir: Directory to save results
+        clean_signal: Clean reference signal (optional, for additional plots)
+        noisy_signals: Dictionary of noisy signals (optional)
+        enhanced_signals: Dictionary of enhanced signals (optional)
     """
     print(f"\nSaving results to {results_dir}...")
+    
+    from src.visualization import SpeechVisualizer
+    visualizer = SpeechVisualizer()
 
     # Create comparison plots
     noise_types = list(results.keys())
@@ -347,6 +402,69 @@ def save_noise_comparison_results(results, results_dir):
                         f.write(f"    Improvement: {improvement:+.2f} dB\n")
 
     print(f"  ✓ Saved: advanced_results_summary.txt")
+    
+    # Generate additional visualizations
+    print(f"\nGenerating additional visualizations...")
+    
+    # SNR Improvement Heatmap
+    try:
+        visualizer.plot_snr_improvement_heatmap(
+            results, 
+            save_path=os.path.join(results_dir, 'snr_improvement_heatmap.png')
+        )
+    except Exception as e:
+        print(f"  ⚠ Could not generate heatmap: {e}")
+    
+    # Improvement Comparison Bar Charts
+    try:
+        visualizer.plot_improvement_comparison(
+            results,
+            save_path=os.path.join(results_dir, 'improvement_comparison.png')
+        )
+    except Exception as e:
+        print(f"  ⚠ Could not generate improvement comparison: {e}")
+    
+    # If audio signals provided, create spectrogram and waveform comparisons
+    if clean_signal is not None and noisy_signals is not None and enhanced_signals is not None:
+        # Pick one example: street noise at 10 dB
+        if ('street', 10) in noisy_signals and ('street', 10, 'baseline') in enhanced_signals and ('street', 10, 'contextual') in enhanced_signals:
+            try:
+                visualizer.plot_spectrogram_comparison(
+                    clean_signal,
+                    noisy_signals[('street', 10)],
+                    enhanced_signals[('street', 10, 'baseline')],
+                    enhanced_signals[('street', 10, 'contextual')],
+                    sample_rate=16000,
+                    save_path=os.path.join(results_dir, 'spectrogram_comparison_street_10dB.png')
+                )
+            except Exception as e:
+                print(f"  ⚠ Could not generate spectrogram: {e}")
+            
+            try:
+                visualizer.plot_waveform_comparison(
+                    clean_signal,
+                    noisy_signals[('street', 10)],
+                    enhanced_signals[('street', 10, 'baseline')],
+                    enhanced_signals[('street', 10, 'contextual')],
+                    sample_rate=16000,
+                    save_path=os.path.join(results_dir, 'waveform_comparison_street_10dB.png')
+                )
+            except Exception as e:
+                print(f"  ⚠ Could not generate waveform comparison: {e}")
+        
+        # Metrics radar plot for one condition
+        if 'street' in results:
+            base_metrics = results['street'].get('snr10_base', {})
+            ctx_metrics = results['street'].get('snr10_ctx', {})
+            if base_metrics and ctx_metrics:
+                try:
+                    visualizer.plot_metrics_radar(
+                        base_metrics,
+                        ctx_metrics,
+                        save_path=os.path.join(results_dir, 'metrics_radar_street_10dB.png')
+                    )
+                except Exception as e:
+                    print(f"  ⚠ Could not generate radar plot: {e}")
 
 
 def main():
