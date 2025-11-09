@@ -37,9 +37,18 @@ env/
 .ipynb_checkpoints
 
 # Data (keep structure, ignore contents)
+# Ignore all generated data but keep the directory structure
 data/database/*.wav
 data/processed/*.wav
+data/processed/*.npy
 data/test/*.wav
+data/results/*.png
+data/results/*.txt
+data/results/*.json
+data/raw/*.wav
+# But keep example README files if any
+!data/raw/README.md
+!data/README.md
 
 # OS
 .DS_Store
